@@ -23,7 +23,7 @@ public class ControladorAnalise {
         this.servicoAnalise = servicoAnalise;
     }
 
-    @PostMapping(       consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public RespostaAnaliseDto analisar(@RequestParam("arquivo") MultipartFile arquivo) throws IOException {
         if (arquivo.isEmpty()) {
             throw new ArquivoCsvInvalidoException("O arquivo está vazio.");

@@ -107,6 +107,23 @@ class TesteLeitorCsv {
     }
 
     @Test
+    void deveTratarLimiteNegativoComoLinhaInvalidaEContinuarLeitura() throws Exception {
+        String conteudoCsv = """
+                placa;dataHora;velocidadeKmh;limiteKmh
+                ABC1D23;2026-10-05T08:00:00;72;-60
+                DEF2G34;2026-10-05T08:01:00;80;60
+                """;
+
+        ResultadoLeituraCsv resultado = leitorCsv.ler(criarFluxoEntrada(conteudoCsv));
+
+        assertEquals(1, resultado.leiturasValidas().size());
+        assertEquals("DEF2G34", resultado.leiturasValidas().getFirst().placa());
+        assertEquals(
+                List.of(new LinhaCsvInvalida(2, "limiteKmh deve ser maior que zero.")),
+                resultado.linhasInvalidas());
+    }
+
+    @Test
     void deveLerArquivoReferenciaEInformarLinhasInvalidas() throws Exception {
         Path diretorioClassesTeste = Path.of(
                 TesteLeitorCsv.class.getProtectionDomain().getCodeSource().getLocation().toURI());
