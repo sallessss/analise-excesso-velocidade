@@ -1,4 +1,234 @@
-<main>
-  <h1>{{ title }}</h1>
-  <p>A aplicação está pronta para receber as funcionalidades nas próximas fases.</p>
+<header class="cabecalho">
+  <div class="cabecalho__conteudo">
+    <p class="rotulo">Gestão de frota</p>
+    <h1>Análise de excesso de velocidade</h1>
+    <p class="cabecalho__descricao">
+      Envie as leituras do rastreador e transforme o arquivo em episódios e prioridades de ação.
+    </p>
+  </div>
+</header>
+
+<main class="conteudo">
+  <section class="painel painel--envio" aria-labelledby="titulo-envio">
+    <div>
+      <p class="rotulo rotulo--escuro">Nova análise</p>
+      <h2 id="titulo-envio">Selecione o arquivo de leituras</h2>
+      <p class="texto-secundario">Formato CSV com separador por ponto e vírgula.</p>
+    </div>
+
+    <form class="formulario-envio" (ngSubmit)="analisar()">
+      <label class="campo-arquivo" for="arquivo">
+        <span class="campo-arquivo__icone" aria-hidden="true">CSV</span>
+        <span>
+          <strong>{{ arquivoSelecionado?.name || 'Escolher arquivo' }}</strong>
+          <small>
+            @if (arquivoSelecionado) {
+              {{ formatarTamanhoArquivo(arquivoSelecionado.size) }}
+            } @else {
+              Nenhum arquivo selecionado
+            }
+          </small>
+        </span>
+      </label>
+      <input
+        id="arquivo"
+        class="campo-arquivo__entrada"
+        type="file"
+        accept=".csv,text/csv"
+        (change)="selecionarArquivo($event)"
+      />
+
+      <button class="botao-principal" type="submit" [disabled]="carregando">
+        @if (carregando) {
+          <span class="carregador" aria-hidden="true"></span>
+          Analisando...
+        } @else {
+          Analisar arquivo
+        }
+      </button>
+    </form>
+
+    @if (mensagemErro) {
+      <p class="mensagem mensagem--erro" role="alert">{{ mensagemErro }}</p>
+    }
+    @if (mensagemSucesso) {
+      <p class="mensagem mensagem--sucesso" role="status">{{ mensagemSucesso }}</p>
+    }
+  </section>
+
+  @if (resposta; as analise) {
+    <section class="secao" aria-labelledby="titulo-resumo">
+      <div class="secao__cabecalho">
+        <div>
+          <p class="rotulo rotulo--escuro">Visão geral</p>
+          <h2 id="titulo-resumo">Resumo da análise</h2>
+        </div>
+      </div>
+
+      <div class="grade-resumo">
+        <article class="cartao-indicador">
+          <span>Linhas lidas</span>
+          <strong>{{ analise.resumo.linhasLidas }}</strong>
+          <small>Total processado</small>
+        </article>
+        <article class="cartao-indicador">
+          <span>Linhas válidas</span>
+          <strong>{{ analise.resumo.linhasValidas }}</strong>
+          <small>Aptas para análise</small>
+        </article>
+        <article class="cartao-indicador cartao-indicador--destaque">
+          <span>Episódios</span>
+          <strong>{{ analise.resumo.totalEpisodios }}</strong>
+          <small>Excessos identificados</small>
+        </article>
+        <article class="cartao-indicador">
+          <span>Linhas inválidas</span>
+          <strong>{{ analise.linhasInvalidas.length }}</strong>
+          <small>Requerem revisão</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="secao" aria-labelledby="titulo-ranking">
+      <div class="secao__cabecalho">
+        <div>
+          <p class="rotulo rotulo--escuro">Prioridade</p>
+          <h2 id="titulo-ranking">Ranking de veículos</h2>
+        </div>
+        <span class="contador">{{ analise.ranking.length }} veículos</span>
+      </div>
+
+      <div class="tabela-container">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Posição</th>
+              <th scope="col">Placa</th>
+              <th scope="col">Pontos</th>
+              <th scope="col">Maior velocidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (posicao of analise.ranking; track posicao.placa; let indice = $index) {
+              <tr>
+                <td>
+                  <span class="posicao">{{ indice + 1 }}</span>
+                </td>
+                <td>
+                  <strong>{{ posicao.placa }}</strong>
+                </td>
+                <td>{{ posicao.totalPontos }}</td>
+                <td>{{ posicao.maiorVelocidadeKmh | number: '1.0-1' }} km/h</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="estado-vazio">Nenhum veículo com episódio.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="secao" aria-labelledby="titulo-episodios">
+      <div class="secao__cabecalho secao__cabecalho--filtro">
+        <div>
+          <p class="rotulo rotulo--escuro">Ocorrências</p>
+          <h2 id="titulo-episodios">Episódios de excesso</h2>
+        </div>
+
+        <label class="campo-filtro" for="gravidade">
+          <span>Filtrar por gravidade</span>
+          <select id="gravidade" name="gravidade" [(ngModel)]="filtroGravidade">
+            @for (opcao of opcoesGravidade; track opcao.valor) {
+              <option [value]="opcao.valor">{{ opcao.rotulo }}</option>
+            }
+          </select>
+        </label>
+      </div>
+
+      <p class="resultado-filtro">
+        Exibindo {{ episodiosFiltrados.length }} de {{ analise.episodios.length }} episódios
+      </p>
+
+      <div class="tabela-container">
+        <table class="tabela-episodios">
+          <thead>
+            <tr>
+              <th scope="col">Placa</th>
+              <th scope="col">Início</th>
+              <th scope="col">Fim</th>
+              <th scope="col">Duração</th>
+              <th scope="col">Velocidade máxima</th>
+              <th scope="col">Excesso máximo</th>
+              <th scope="col">Gravidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (episodio of episodiosFiltrados; track episodio.placa + episodio.inicio) {
+              <tr>
+                <td>
+                  <strong>{{ episodio.placa }}</strong>
+                </td>
+                <td>{{ episodio.inicio | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+                <td>{{ episodio.fim | date: 'dd/MM/yyyy HH:mm:ss' }}</td>
+                <td>{{ episodio.duracaoSegundos }} s</td>
+                <td>{{ episodio.velocidadeMaximaKmh | number: '1.0-1' }} km/h</td>
+                <td>{{ episodio.excessoMaximoPercentual | number: '1.1-1' }}%</td>
+                <td>
+                  <span
+                    class="selo-gravidade"
+                    [ngClass]="'selo-gravidade--' + episodio.gravidade.toLowerCase()"
+                  >
+                    {{ episodio.gravidade }}
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7" class="estado-vazio">Nenhum episódio para este filtro.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="secao" aria-labelledby="titulo-invalidas">
+      <div class="secao__cabecalho">
+        <div>
+          <p class="rotulo rotulo--escuro">Qualidade dos dados</p>
+          <h2 id="titulo-invalidas">Linhas inválidas</h2>
+        </div>
+        <span class="contador contador--alerta"
+          >{{ analise.linhasInvalidas.length }} ocorrências</span
+        >
+      </div>
+
+      @if (analise.linhasInvalidas.length > 0) {
+        <div class="tabela-container">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Linha</th>
+                <th scope="col">Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (linha of analise.linhasInvalidas; track linha.numeroLinha) {
+                <tr>
+                  <td>
+                    <strong>#{{ linha.numeroLinha }}</strong>
+                  </td>
+                  <td>{{ linha.motivo }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="estado-positivo">Todas as linhas foram processadas com sucesso.</p>
+      }
+    </section>
+  }
 </main>
